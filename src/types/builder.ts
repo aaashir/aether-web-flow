@@ -5,6 +5,7 @@ export interface Block {
   content: any;
   styles: BlockStyles;
   position: number;
+  [key: string]: any; // Add index signature to make it compatible with Json type
 }
 
 export interface BlockStyles {

@@ -15,6 +15,7 @@ import { Block } from '../types/builder';
 import { Button } from './ui/button';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
+import { Json } from '../integrations/supabase/types';
 
 export const WebsiteBuilder: React.FC = () => {
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -71,7 +72,10 @@ export const WebsiteBuilder: React.FC = () => {
       // If a website exists, load it
       if (data) {
         setCurrentWebsite(data);
-        setBlocks(data.blocks || []);
+        // Convert Json[] to Block[] when loading from DB
+        if (data.blocks && Array.isArray(data.blocks)) {
+          setBlocks(data.blocks.map((block: Json) => block as unknown as Block));
+        }
       }
     } catch (error: any) {
       console.error('Error loading website data:', error);
@@ -141,10 +145,11 @@ export const WebsiteBuilder: React.FC = () => {
       
       if (currentWebsite) {
         // Update existing website
+        // Convert Block[] to Json[] when saving to DB
         const { error } = await supabase
           .from('websites')
           .update({ 
-            blocks: blocksToSave,
+            blocks: blocksToSave as unknown as Json[],
             updated_at: new Date().toISOString(),
             theme_settings: { theme }
           })
@@ -153,12 +158,13 @@ export const WebsiteBuilder: React.FC = () => {
         if (error) throw error;
       } else {
         // Create new website
+        // Convert Block[] to Json[] when saving to DB
         const { error } = await supabase
           .from('websites')
           .insert({
             user_id: user.id,
             name: 'My Website',
-            blocks: blocksToSave,
+            blocks: blocksToSave as unknown as Json[],
             theme_settings: { theme }
           })
           .select();
