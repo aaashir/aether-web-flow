@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { Canvas } from './Canvas';
 import { StylePanel } from './StylePanel';
 import { Header } from './Header';
+import { BlockRenderer } from './BlockRenderer';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
