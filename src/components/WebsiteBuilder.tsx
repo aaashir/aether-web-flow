@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -140,6 +139,23 @@ export const WebsiteBuilder: React.FC = () => {
     setBlocks(updatedBlocks);
   };
 
+  // Function to safely convert Block objects to JSON-safe objects
+  const blocksToJsonSafe = (blocksToConvert: Block[]): Json[] => {
+    return blocksToConvert.map(block => {
+      // Create a clean copy without functions or circular references
+      const cleanBlock = {
+        id: block.id,
+        type: block.type,
+        content: block.content,
+        styles: {...block.styles},
+        position: block.position
+      };
+      
+      // Return as Json type
+      return cleanBlock as unknown as Json;
+    });
+  };
+
   const saveWebsite = async (blocksToSave = blocks) => {
     if (!user) {
       toast({
@@ -153,13 +169,15 @@ export const WebsiteBuilder: React.FC = () => {
     try {
       setIsLoading(true);
       
+      // Convert blocks to JSON-safe format
+      const jsonSafeBlocks = blocksToJsonSafe(blocksToSave);
+      
       if (currentWebsite) {
         // Update existing website
-        // Convert Block[] to Json[] when saving to DB
         const { error } = await supabase
           .from('websites')
           .update({ 
-            blocks: blocksToSave as unknown as Json[],
+            blocks: jsonSafeBlocks,
             updated_at: new Date().toISOString(),
             theme_settings: { theme }
           })
@@ -168,13 +186,12 @@ export const WebsiteBuilder: React.FC = () => {
         if (error) throw error;
       } else {
         // Create new website
-        // Convert Block[] to Json[] when saving to DB
         const { data, error } = await supabase
           .from('websites')
           .insert({
             user_id: user.id,
             name: 'My Website',
-            blocks: blocksToSave as unknown as Json[],
+            blocks: jsonSafeBlocks,
             theme_settings: { theme }
           })
           .select();
@@ -300,7 +317,7 @@ export const WebsiteBuilder: React.FC = () => {
           {!previewMode && (
             <Button
               onClick={() => setIsChatOpen(true)}
-              className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-full shadow-lg z-10"
+              className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg z-10"
               size="lg"
             >
               <Sparkles className="mr-2 h-5 w-5" />
