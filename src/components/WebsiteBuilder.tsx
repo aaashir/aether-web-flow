@@ -24,6 +24,7 @@ export const WebsiteBuilder: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentWebsite, setCurrentWebsite] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
   
   const { user, loading } = useAuth();
   const { theme } = useTheme();
@@ -79,6 +80,13 @@ export const WebsiteBuilder: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error loading website data:', error);
+      if (error.code !== 'PGRST116') {
+        toast({
+          title: 'Error loading website',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -123,11 +131,12 @@ export const WebsiteBuilder: React.FC = () => {
     newBlocks.splice(toIndex, 0, movedBlock);
     
     // Update positions
-    newBlocks.forEach((block, index) => {
-      block.position = index;
-    });
+    const updatedBlocks = newBlocks.map((block, index) => ({
+      ...block,
+      position: index
+    }));
     
-    setBlocks(newBlocks);
+    setBlocks(updatedBlocks);
   };
 
   const saveWebsite = async (blocksToSave = blocks) => {
@@ -159,7 +168,7 @@ export const WebsiteBuilder: React.FC = () => {
       } else {
         // Create new website
         // Convert Block[] to Json[] when saving to DB
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('websites')
           .insert({
             user_id: user.id,
@@ -171,8 +180,9 @@ export const WebsiteBuilder: React.FC = () => {
           
         if (error) throw error;
         
-        // Reload to get the created website
-        await loadWebsiteData();
+        if (data && data[0]) {
+          setCurrentWebsite(data[0]);
+        }
       }
       
       toast({
@@ -180,6 +190,7 @@ export const WebsiteBuilder: React.FC = () => {
         description: 'Your changes have been saved successfully',
       });
     } catch (error: any) {
+      console.error('Error saving website:', error);
       toast({
         title: 'Error saving website',
         description: error.message,
@@ -193,25 +204,34 @@ export const WebsiteBuilder: React.FC = () => {
   const publishWebsite = async () => {
     if (!currentWebsite) {
       await saveWebsite();
+      // If it's the first save, the currentWebsite might not be set immediately
+      if (!currentWebsite) {
+        toast({
+          title: 'Please try again',
+          description: 'Please save your website first, then publish',
+        });
+        return;
+      }
     }
     
     try {
       setIsLoading(true);
       
-      // Here you would typically call an API endpoint to publish the site
-      // For now, just update the published status
+      // Generate a unique publish URL if one doesn't exist
+      const publishUrl = currentWebsite.publish_url || `website-${user?.id.substring(0, 8)}-${Date.now().toString(36)}`;
+      
       const { error } = await supabase
         .from('websites')
         .update({ 
           published: true,
-          publish_url: `website-${Date.now()}`,
+          publish_url: publishUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentWebsite?.id);
         
       if (error) throw error;
       
-      // Reload website data
+      // Reload website data to get the updated publish URL
       await loadWebsiteData();
       
       toast({
@@ -219,6 +239,7 @@ export const WebsiteBuilder: React.FC = () => {
         description: 'Your website is now live',
       });
     } catch (error: any) {
+      console.error('Error publishing website:', error);
       toast({
         title: 'Error publishing website',
         description: error.message,
@@ -230,16 +251,19 @@ export const WebsiteBuilder: React.FC = () => {
   };
 
   const previewWebsite = () => {
-    // For now, just show a toast
+    setPreviewMode(prevMode => !prevMode);
+    
     toast({
-      title: 'Preview mode',
-      description: 'Preview functionality is coming soon',
+      title: previewMode ? 'Edit mode' : 'Preview mode',
+      description: previewMode ? 'You can now edit your website' : 'This is how your website will look when published',
     });
   };
 
   const handleCustomBlockCreated = () => {
     // Reload custom blocks in sidebar
     setIsChatOpen(false);
+    // Reload website data to get the latest state
+    loadWebsiteData();
   };
 
   // Show loading state while checking authentication
@@ -256,42 +280,67 @@ export const WebsiteBuilder: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
-      <Header 
-        blocks={blocks}
-        onPreview={previewWebsite}
-        onSave={saveWebsite}
-        onPublish={publishWebsite}
-        isLoading={isLoading}
-        isPublished={currentWebsite?.published}
-        publishUrl={currentWebsite?.publish_url}
-      />
+      {!previewMode && (
+        <Header 
+          blocks={blocks}
+          onPreview={previewWebsite}
+          onSave={saveWebsite}
+          onPublish={publishWebsite}
+          isLoading={isLoading}
+          isPublished={currentWebsite?.published}
+          publishUrl={currentWebsite?.publish_url}
+        />
+      )}
       
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar onAddBlock={addBlock} />
+        {!previewMode && <Sidebar onAddBlock={addBlock} />}
         
         <div className="flex-1 overflow-y-auto relative">
-          <Button
-            onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-full shadow-lg z-10"
-            size="lg"
-          >
-            <Sparkles className="mr-2 h-5 w-5" />
-            <span>AI Assistant</span>
-          </Button>
+          {!previewMode && (
+            <Button
+              onClick={() => setIsChatOpen(true)}
+              className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-full shadow-lg z-10"
+              size="lg"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              <span>AI Assistant</span>
+            </Button>
+          )}
           
-          <Canvas
-            blocks={blocks}
-            selectedBlock={selectedBlock}
-            onSelectBlock={setSelectedBlock}
-            onUpdateBlock={updateBlock}
-            onDeleteBlock={deleteBlock}
-            onMoveBlock={moveBlock}
-            onOpenStylePanel={() => setIsStylePanelOpen(true)}
-            getDragProps={getDragProps}
-          />
+          {previewMode ? (
+            <div className="bg-white dark:bg-gray-900 min-h-screen">
+              <div className="fixed top-4 right-4 z-50">
+                <Button 
+                  onClick={previewWebsite}
+                  variant="outline" 
+                  className="bg-white dark:bg-gray-800 shadow-md"
+                >
+                  Exit Preview
+                </Button>
+              </div>
+              <div className="max-w-4xl mx-auto">
+                {blocks.map((block) => (
+                  <div key={block.id} style={{...block.styles}}>
+                    <BlockRenderer block={block} onUpdate={() => {}} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Canvas
+              blocks={blocks}
+              selectedBlock={selectedBlock}
+              onSelectBlock={setSelectedBlock}
+              onUpdateBlock={updateBlock}
+              onDeleteBlock={deleteBlock}
+              onMoveBlock={moveBlock}
+              onOpenStylePanel={() => setIsStylePanelOpen(true)}
+              getDragProps={getDragProps}
+            />
+          )}
         </div>
         
-        {isStylePanelOpen && selectedBlock && (
+        {isStylePanelOpen && selectedBlock && !previewMode && (
           <StylePanel
             block={blocks.find(b => b.id === selectedBlock)}
             onUpdateBlock={updateBlock}

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { Play, Save, Globe, Moon, Sun, LogOut } from 'lucide-react';
+import { Play, Save, Globe, Moon, Sun, LogOut, ExternalLink } from 'lucide-react';
 import { Block } from '../types/builder';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
@@ -34,6 +34,12 @@ export const Header: React.FC<HeaderProps> = ({
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const openPublishedSite = () => {
+    if (publishUrl) {
+      window.open(`https://${publishUrl}.example.com`, '_blank');
+    }
   };
 
   return (
@@ -103,6 +109,18 @@ export const Header: React.FC<HeaderProps> = ({
           <Globe className="h-4 w-4" />
           <span>{isPublished ? 'Update' : 'Publish'}</span>
         </Button>
+        
+        {isPublished && publishUrl && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={openPublishedSite}
+            className="flex items-center space-x-2"
+          >
+            <ExternalLink className="h-4 w-4" />
+            <span>View Site</span>
+          </Button>
+        )}
         
         {user && (
           <TooltipProvider>

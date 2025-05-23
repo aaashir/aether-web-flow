@@ -27,7 +27,11 @@ export const useDragDrop = ({ blocks, onMoveBlock }: DragDropProps) => {
     blocksRef.current = blocksRef.current.slice(0, blocks.length);
   }, [blocks.length]);
 
-  const handleDragStart = (index: number) => {
+  const handleDragStart = (index: number, e: React.DragEvent) => {
+    // Add required dataTransfer data to make drag work across browsers
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.dataTransfer.effectAllowed = 'move';
+    
     setDragState({
       isDragging: true,
       draggedIndex: index,
@@ -39,7 +43,8 @@ export const useDragDrop = ({ blocks, onMoveBlock }: DragDropProps) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (dragState.draggedIndex === null || dragState.draggedIndex === index) {
+    // Prevent unnecessary state updates
+    if (dragState.draggedIndex === null || dragState.draggedIndex === index || dragState.draggedOverIndex === index) {
       return;
     }
     
@@ -49,13 +54,24 @@ export const useDragDrop = ({ blocks, onMoveBlock }: DragDropProps) => {
     }));
   };
 
-  const handleDragEnd = () => {
-    const { draggedIndex, draggedOverIndex } = dragState;
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    const { draggedIndex } = dragState;
     
-    if (draggedIndex !== null && draggedOverIndex !== null && draggedIndex !== draggedOverIndex) {
-      onMoveBlock(draggedIndex, draggedOverIndex);
+    if (draggedIndex !== null && draggedIndex !== index) {
+      onMoveBlock(draggedIndex, index);
     }
     
+    // Reset drag state
+    setDragState({
+      isDragging: false,
+      draggedIndex: null,
+      draggedOverIndex: null,
+    });
+  };
+
+  const handleDragEnd = () => {
+    // Reset drag state
     setDragState({
       isDragging: false,
       draggedIndex: null,
@@ -68,9 +84,10 @@ export const useDragDrop = ({ blocks, onMoveBlock }: DragDropProps) => {
       blocksRef.current[index] = el;
     },
     draggable: true,
-    onDragStart: () => handleDragStart(index),
+    onDragStart: (e: React.DragEvent) => handleDragStart(index, e),
     onDragOver: (e: React.DragEvent) => handleDragOver(e, index),
     onDragEnd: handleDragEnd,
+    onDrop: (e: React.DragEvent) => handleDrop(e, index),
     className: `
       ${dragState.isDragging && dragState.draggedIndex === index ? 'opacity-50' : ''}
       ${dragState.isDragging && dragState.draggedOverIndex === index ? 'border-2 border-dashed border-blue-500' : ''}
