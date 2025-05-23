@@ -9,7 +9,113 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chat_messages: {
+        Row: {
+          block_id: string | null
+          created_at: string
+          id: string
+          is_generating_block: boolean | null
+          message: string
+          response: string | null
+          user_id: string
+        }
+        Insert: {
+          block_id?: string | null
+          created_at?: string
+          id?: string
+          is_generating_block?: boolean | null
+          message: string
+          response?: string | null
+          user_id: string
+        }
+        Update: {
+          block_id?: string | null
+          created_at?: string
+          id?: string
+          is_generating_block?: boolean | null
+          message?: string
+          response?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "custom_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_blocks: {
+        Row: {
+          category: string | null
+          content: Json
+          created_at: string
+          id: string
+          name: string
+          preview: string | null
+          styles: Json
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          content: Json
+          created_at?: string
+          id?: string
+          name: string
+          preview?: string | null
+          styles: Json
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          preview?: string | null
+          styles?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      websites: {
+        Row: {
+          blocks: Json[] | null
+          created_at: string
+          id: string
+          name: string
+          publish_url: string | null
+          published: boolean | null
+          theme_settings: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocks?: Json[] | null
+          created_at?: string
+          id?: string
+          name: string
+          publish_url?: string | null
+          published?: boolean | null
+          theme_settings?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocks?: Json[] | null
+          created_at?: string
+          id?: string
+          name?: string
+          publish_url?: string | null
+          published?: boolean | null
+          theme_settings?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
